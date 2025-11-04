@@ -53,6 +53,8 @@ body {
   object-fit: fill;
   z-index: 0;
   /* Equirectangular projection - perfect alignment with SVG overlay */
+  /* Clip to match D3 projection bounds (avoiding polar distortion) */
+  clip-path: inset(0 0 0 0);
 }
 
 #overlay-layer {

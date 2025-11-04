@@ -55,30 +55,38 @@ function setupLayers() {
 }
 
 function renderCountries(countries) {
-  // Create a mask definition for ocean (inverted countries)
+  // Create a clip path for the valid projection area (sphere)
   const defs = overlayLayer.append('defs');
+  const clipPath = defs.append('clipPath').attr('id', 'sphere-clip');
+  clipPath
+    .append('path')
+    .datum({ type: 'Sphere' })
+    .attr('d', geoPath);
+  
+  // Create a mask definition for ocean (inverted countries)
   const mask = defs.append('mask').attr('id', 'ocean-mask');
   
-  // White rectangle (shows everything)
-  mask.append('rect')
-    .attr('width', MAP_WIDTH)
-    .attr('height', MAP_HEIGHT)
+  // White sphere (shows ocean areas)
+  mask.append('path')
+    .datum({ type: 'Sphere' })
+    .attr('d', geoPath)
     .attr('fill', 'white');
   
-  // Black countries (hides these areas)
-  mask.selectAll('path')
+  // Black countries (hides these areas from ocean)
+  mask.selectAll('path.country-mask')
     .data(countries.features)
     .join('path')
+    .attr('class', 'country-mask')
     .attr('d', geoPath)
     .attr('fill', 'black');
   
-  // Layer 1: Ocean background (with mask applied)
+  // Layer 1: Ocean background (only in ocean areas)
   const oceanGroup = overlayLayer.append('g').attr('class', 'ocean-group');
   oceanGroup
-    .append('rect')
-    .attr('width', MAP_WIDTH)
-    .attr('height', MAP_HEIGHT)
+    .append('path')
+    .datum({ type: 'Sphere' })
     .attr('class', 'ocean-background')
+    .attr('d', geoPath)
     .attr('mask', 'url(#ocean-mask)')
     .style('fill', '#a8d8ea')
     .style('pointer-events', 'none');
