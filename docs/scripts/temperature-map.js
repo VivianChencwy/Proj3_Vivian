@@ -3,12 +3,14 @@ const MAP_HEIGHT = 540;
 const WORLD_TOPOJSON_URL =
   'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const TEMPERATURE_DATA_URL = 'data/tas_2025_by_country.json';
+const NAME_MAPPING_URL = 'data/country_name_to_iso3.json';
 
 const projection = d3.geoNaturalEarth1().scale(180).translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]);
 const geoPath = d3.geoPath(projection);
 const graticule = d3.geoGraticule10();
 
 const pinnedCountries = new Map();
+let countryNameToIso = new Map();
 
 const mapContainer = d3.select('#map');
 const svg = mapContainer
@@ -35,10 +37,13 @@ const selectionList = d3.select('#selection-list');
 init();
 
 async function init() {
-  const [worldTopo, temperatureData] = await Promise.all([
+  const [worldTopo, temperatureData, nameMappingData] = await Promise.all([
     d3.json(WORLD_TOPOJSON_URL),
     d3.json(TEMPERATURE_DATA_URL),
+    d3.json(NAME_MAPPING_URL),
   ]);
+
+  countryNameToIso = new Map(Object.entries(nameMappingData));
 
   const countries = topojson.feature(worldTopo, worldTopo.objects.countries).features;
 
@@ -132,11 +137,18 @@ function getIso3Code(feature) {
     feature.properties?.adm0_a3 ||
     null;
 
-  if (!raw || raw === '-99') {
+  if (raw && raw !== '-99') {
+    return String(raw).toUpperCase();
+  }
+
+  const name = getCountryName(feature);
+  if (!name) {
     return null;
   }
 
-  return String(raw).toUpperCase();
+  const normalizedName = name.replace(/\u2019/g, "'");
+
+  return countryNameToIso.get(name) || countryNameToIso.get(normalizedName) || null;
 }
 
 function getCountryName(feature) {

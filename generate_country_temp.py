@@ -2,10 +2,10 @@ import json
 import os
 from pathlib import Path
 
-import country_converter as coco
 import numpy as np
 import regionmask
 import xarray as xr
+import country_converter as coco
 
 
 def main():
@@ -32,6 +32,7 @@ def main():
 
     weighted_sum_by_iso = {}
     weight_total_by_iso = {}
+    name_to_iso3 = {}
 
     output_dir = Path("docs/data")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -49,6 +50,8 @@ def main():
         if iso3 in (None, "", "-99"):
             continue
 
+        name_to_iso3[name] = iso3
+
         ws = weighted_sum.isel(region=idx).item()
         wt = weight_totals.isel(region=idx).item()
         if np.isnan(ws) or np.isnan(wt) or wt == 0:
@@ -65,7 +68,12 @@ def main():
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(country_temp_map, f, indent=2)
 
+    name_map_path = output_dir / "country_name_to_iso3.json"
+    with name_map_path.open("w", encoding="utf-8") as f:
+        json.dump(name_to_iso3, f, indent=2, ensure_ascii=False)
+
     print(f"Saved {len(country_temp_map)} country averages to {output_path}")
+    print(f"Saved {len(name_to_iso3)} name mappings to {name_map_path}")
 
 
 if __name__ == "__main__":
