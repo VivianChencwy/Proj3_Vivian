@@ -52,25 +52,21 @@ function setupLayers() {
     .attr('id', 'overlay-layer')
     .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`)
     .attr('preserveAspectRatio', 'xMidYMid meet');
-  
-  // Add ocean mask as the first element (bottom layer)
-  overlayLayer
-    .append('path')
-    .datum({ type: 'Sphere' })
-    .attr('class', 'ocean-mask')
-    .attr('d', geoPath)
-    .style('fill', '#a8d8ea')
-    .style('pointer-events', 'none');
 }
 
 function renderCountries(countries) {
-  // Group for country masks (middle layer)
+  // Layer 1 (bottom): Ocean mask - covers entire map with blue
+  const oceanGroup = overlayLayer.append('g').attr('class', 'ocean-group');
+  oceanGroup
+    .append('rect')
+    .attr('width', MAP_WIDTH)
+    .attr('height', MAP_HEIGHT)
+    .attr('class', 'ocean-mask')
+    .style('fill', '#a8d8ea')
+    .style('pointer-events', 'none');
+  
+  // Layer 2 (middle): Country masks - gray covering land areas
   const countryMasks = overlayLayer.append('g').attr('class', 'country-masks');
-  
-  // Group for country borders (top layer)
-  const countryBorders = overlayLayer.append('g').attr('class', 'country-borders');
-  
-  // Draw country masks first
   countryMasks
     .selectAll('path.country')
     .data(countries.features)
@@ -81,7 +77,8 @@ function renderCountries(countries) {
     .on('mouseleave', handleMouseLeave)
     .on('click', handleClick);
   
-  // Draw country borders on top
+  // Layer 3 (top): Country borders - just outlines
+  const countryBorders = overlayLayer.append('g').attr('class', 'country-borders');
   countryBorders
     .selectAll('path.country-border')
     .data(countries.features)
