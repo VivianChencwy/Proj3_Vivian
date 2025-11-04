@@ -1,223 +1,221 @@
+// Interactive Climate Temperature Map with Mask Reveal
+// Bottom layer: global temperature heatmap
+// Top layer: country borders as masks that can be toggled
+
 const MAP_WIDTH = 960;
 const MAP_HEIGHT = 540;
-const WORLD_TOPOJSON_URL =
-  'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-const TEMPERATURE_DATA_URL = 'data/tas_2025_by_country.json';
-const NAME_MAPPING_URL = 'data/country_name_to_iso3.json';
+const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+const HEATMAP_URL = 'data/global_temperature_2025.png';
 
-const projection = d3.geoNaturalEarth1().scale(180).translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]);
+const projection = d3
+  .geoNaturalEarth1()
+  .scale(180)
+  .translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]);
 const geoPath = d3.geoPath(projection);
-const graticule = d3.geoGraticule10();
 
-const pinnedCountries = new Map();
-let countryNameToIso = new Map();
-
-const mapContainer = d3.select('#map');
-const svg = mapContainer
-  .append('svg')
-  .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`)
-  .attr('aria-label', 'World map showing 2025 surface air temperature');
-
-const defs = svg.append('defs');
-const gradient = defs
-  .append('linearGradient')
-  .attr('id', 'temperature-gradient')
-  .attr('x1', '0%')
-  .attr('x2', '100%')
-  .attr('y1', '0%')
-  .attr('y2', '0%');
-
-const tooltip = mapContainer
-  .append('div')
-  .attr('class', 'tooltip')
-  .style('opacity', 0);
-
-const selectionList = d3.select('#selection-list');
-
-init();
+const revealedCountries = new Set();
+let tooltip, overlayLayer;
 
 async function init() {
-  const [worldTopo, temperatureData, nameMappingData] = await Promise.all([
-    d3.json(WORLD_TOPOJSON_URL),
-    d3.json(TEMPERATURE_DATA_URL),
-    d3.json(NAME_MAPPING_URL),
-  ]);
+  try {
+    const worldTopo = await d3.json(WORLD_TOPOJSON_URL);
+    
+    const countries = topojson.feature(worldTopo, worldTopo.objects.countries);
 
-  countryNameToIso = new Map(Object.entries(nameMappingData));
+    setupLayers();
+    renderCountries(countries);
+    addLegend();
+    setupTooltip();
 
-  const countries = topojson.feature(worldTopo, worldTopo.objects.countries).features;
-
-  const temperatures = new Map(Object.entries(temperatureData));
-  const temperatureValues = Array.from(temperatures.values());
-  const [minTemp, maxTemp] = d3.extent(temperatureValues);
-
-  const colorScale = d3
-    .scaleSequential()
-    .domain([minTemp, maxTemp])
-    .interpolator(d3.interpolateTurbo);
-
-  addLegend(minTemp, maxTemp, colorScale);
-
-  svg
-    .append('path')
-    .attr('class', 'graticule')
-    .attr('d', geoPath(graticule))
-    .attr('fill', 'none')
-    .attr('stroke', '#cbd5f5')
-    .attr('stroke-width', 0.5)
-    .attr('opacity', 0.6);
-
-  svg
-    .append('path')
-    .datum({ type: 'Sphere' })
-    .attr('d', geoPath)
-    .attr('fill', '#e2e8f0');
-
-  svg
-    .append('g')
-    .selectAll('path')
-    .data(countries)
-    .join('path')
-    .attr('class', d => {
-      const iso3 = getIso3Code(d);
-      const hasData = iso3 ? temperatures.has(iso3) : false;
-      return hasData ? 'country country--has-data' : 'country';
-    })
-    .attr('data-iso3', d => getIso3Code(d))
-    .attr('data-name', d => getCountryName(d))
-    .attr('d', geoPath)
-    .attr('fill', d => {
-      const iso3 = getIso3Code(d);
-      const value = iso3 ? temperatures.get(iso3) : null;
-      return value != null ? colorScale(value) : '#dbeafe';
-    })
-    .on('mouseover', function (event, feature) {
-      const iso3 = getIso3Code(feature);
-      const name = getCountryName(feature);
-      const value = iso3 ? temperatures.get(iso3) : null;
-
-      showTooltip(event, name, value);
-      d3.select(this).classed('country--hover', true);
-    })
-    .on('mousemove', event => {
-      tooltip
-        .style('left', `${event.offsetX + 12}px`)
-        .style('top', `${event.offsetY + 12}px`);
-    })
-    .on('mouseout', function () {
-      tooltip.classed('is-visible', false);
-      tooltip.transition().duration(150).style('opacity', 0);
-
-      d3.select(this).classed('country--hover', false);
-    })
-    .on('click', function (event, feature) {
-      const iso3 = getIso3Code(feature);
-      const name = getCountryName(feature);
-      const value = iso3 ? temperatures.get(iso3) : null;
-
-      if (value == null) {
-        return;
-      }
-
-      if (pinnedCountries.has(iso3)) {
-        pinnedCountries.delete(iso3);
-        d3.select(this).classed('country--selected', false).classed('country--hover', false);
-      } else {
-        pinnedCountries.set(iso3, { iso3, name, value });
-        d3.select(this).classed('country--selected', true);
-      }
-
-      updateSelectionList();
-    });
+    console.log('✓ Map initialized');
+  } catch (err) {
+    console.error('Failed to initialize map:', err);
+    document.getElementById('map').innerHTML = 
+      '<p style="color: red; padding: 2rem;">Failed to load map data.</p>';
+  }
 }
 
-function getIso3Code(feature) {
-  const raw =
+function setupLayers() {
+  const mapContainer = document.getElementById('map');
+  
+  // Bottom layer: heatmap image
+  const heatmapImg = document.createElement('img');
+  heatmapImg.id = 'heatmap-layer';
+  heatmapImg.src = HEATMAP_URL;
+  heatmapImg.alt = 'Global temperature heatmap';
+  mapContainer.appendChild(heatmapImg);
+
+  // Top layer: SVG overlay with country borders
+  overlayLayer = d3
+    .select('#map')
+    .append('svg')
+    .attr('id', 'overlay-layer')
+    .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+}
+
+function renderCountries(countries) {
+  overlayLayer
+    .selectAll('path.country')
+    .data(countries.features)
+    .join('path')
+    .attr('class', 'country')
+    .attr('d', geoPath)
+    .on('mouseenter', handleMouseEnter)
+    .on('mouseleave', handleMouseLeave)
+    .on('click', handleClick);
+}
+
+function handleMouseEnter(event, feature) {
+  const countryId = getCountryId(feature);
+  const countryName = getCountryName(feature);
+
+  // Show tooltip
+  tooltip
+    .style('opacity', 1)
+    .html(`<strong>${countryName}</strong><br/>Click to toggle mask`);
+
+  // Add hover effect if not revealed
+  if (!revealedCountries.has(countryId)) {
+    d3.select(event.target).classed('country--hover', true);
+  }
+}
+
+function handleMouseLeave(event, feature) {
+  const countryId = getCountryId(feature);
+
+  // Hide tooltip
+  tooltip.style('opacity', 0);
+
+  // Remove hover effect if not revealed
+  if (!revealedCountries.has(countryId)) {
+    d3.select(event.target).classed('country--hover', false);
+  }
+}
+
+function handleClick(event, feature) {
+  const countryId = getCountryId(feature);
+  const countryName = getCountryName(feature);
+  const element = d3.select(event.target);
+
+  if (revealedCountries.has(countryId)) {
+    // Hide the heatmap (restore mask)
+    revealedCountries.delete(countryId);
+    element.classed('country--revealed', false);
+    removeFromSelectionList(countryId);
+  } else {
+    // Reveal the heatmap
+    revealedCountries.add(countryId);
+    element.classed('country--revealed', true);
+    addToSelectionList(countryId, countryName);
+  }
+}
+
+function addToSelectionList(id, name) {
+  const list = document.getElementById('selection-list');
+  const item = document.createElement('li');
+  item.className = 'selection-list__item';
+  item.dataset.countryId = id;
+  item.innerHTML = `
+    <span>${name}</span>
+    <button onclick="removeCountry('${id}')" style="background:none;border:none;cursor:pointer;color:#ef4444;">✕</button>
+  `;
+  list.appendChild(item);
+}
+
+function removeFromSelectionList(id) {
+  const item = document.querySelector(`li[data-country-id="${id}"]`);
+  if (item) {
+    item.remove();
+  }
+}
+
+window.removeCountry = function(id) {
+  revealedCountries.delete(id);
+  overlayLayer
+    .selectAll('path.country')
+    .filter(d => getCountryId(d) === id)
+    .classed('country--revealed', false);
+  removeFromSelectionList(id);
+};
+
+function setupTooltip() {
+  tooltip = d3
+    .select('body')
+    .append('div')
+    .attr('class', 'tooltip')
+    .style('position', 'absolute')
+    .style('opacity', 0);
+
+  overlayLayer.on('mousemove', event => {
+    tooltip
+      .style('left', `${event.pageX + 12}px`)
+      .style('top', `${event.pageY - 8}px`);
+  });
+}
+
+function addLegend() {
+  const mapWrapper = document.querySelector('.map-wrapper');
+  const legend = document.createElement('div');
+  legend.className = 'legend';
+  
+  // Create horizontal gradient bar
+  const canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 20;
+  const ctx = canvas.getContext('2d');
+  
+  // Temperature gradient colors (matching Python colormap)
+  const gradient = ctx.createLinearGradient(0, 0, 200, 0);
+  gradient.addColorStop(0, '#2166ac');
+  gradient.addColorStop(0.25, '#4393c3');
+  gradient.addColorStop(0.5, '#f7f7f7');
+  gradient.addColorStop(0.75, '#f4a582');
+  gradient.addColorStop(1, '#b2182b');
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 200, 20);
+  
+  // Add border
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.strokeRect(0, 0, 200, 20);
+  
+  legend.appendChild(canvas);
+  
+  // Add labels
+  const labelDiv = document.createElement('div');
+  labelDiv.style.display = 'flex';
+  labelDiv.style.justifyContent = 'space-between';
+  labelDiv.style.width = '200px';
+  labelDiv.style.fontSize = '0.75rem';
+  labelDiv.style.color = '#475569';
+  labelDiv.style.marginTop = '4px';
+  labelDiv.innerHTML = '<span>-30°C</span><span>35°C</span>';
+  
+  const container = document.createElement('div');
+  container.appendChild(canvas);
+  container.appendChild(labelDiv);
+  legend.appendChild(container);
+  
+  mapWrapper.appendChild(legend);
+}
+
+function getCountryId(feature) {
+  return (
     feature.properties?.iso_a3 ||
     feature.properties?.adm0_a3 ||
-    null;
-
-  if (raw && raw !== '-99') {
-    return String(raw).toUpperCase();
-  }
-
-  const name = getCountryName(feature);
-  if (!name) {
-    return null;
-  }
-
-  const normalizedName = name.replace(/\u2019/g, "'");
-
-  return countryNameToIso.get(name) || countryNameToIso.get(normalizedName) || null;
+    feature.id ||
+    String(feature.properties?.name || 'unknown')
+  );
 }
 
 function getCountryName(feature) {
-  return feature.properties?.name || feature.properties?.admin || 'Unknown';
+  return feature.properties?.name || 'Unknown';
 }
 
-function showTooltip(event, countryName, temperatureC) {
-  const content = temperatureC != null
-    ? `${countryName}<br/>${temperatureC.toFixed(2)} °C`
-    : `${countryName}<br/>Data unavailable`;
-
-  tooltip
-    .html(content)
-    .style('left', `${event.offsetX + 12}px`)
-    .style('top', `${event.offsetY + 12}px`)
-    .classed('is-visible', true)
-    .transition()
-    .duration(120)
-    .style('opacity', 1);
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
-
-function updateSelectionList() {
-  const entries = Array.from(pinnedCountries.values());
-
-  const items = selectionList.selectAll('li').data(entries, d => d.iso3);
-
-  items
-    .enter()
-    .append('li')
-    .attr('class', 'selection-list__item')
-    .merge(items)
-    .html(d => `${d.name}<span>${d.value.toFixed(2)} °C</span>`);
-
-  items.exit().remove();
-}
-
-function addLegend(minTemp, maxTemp, colorScale) {
-  const legend = svg
-    .append('g')
-    .attr('class', 'legend')
-    .attr('transform', `translate(24, 32)`);
-
-  const gradientSteps = d3.range(0, 1.01, 0.1);
-
-  gradient
-    .selectAll('stop')
-    .data(gradientSteps)
-    .join('stop')
-    .attr('offset', d => `${d * 100}%`)
-    .attr('stop-color', d => colorScale(d3.interpolateNumber(minTemp, maxTemp)(d)));
-
-  legend
-    .append('rect')
-    .attr('width', 200)
-    .attr('height', 14)
-    .attr('rx', 7)
-    .attr('fill', 'url(#temperature-gradient)');
-
-  const axisScale = d3.scaleLinear().domain([minTemp, maxTemp]).range([0, 200]);
-  const axis = d3
-    .axisBottom(axisScale)
-    .ticks(6)
-    .tickFormat(d => `${d.toFixed(1)}°C`);
-
-  legend
-    .append('g')
-    .attr('transform', 'translate(0, 14)')
-    .call(axis)
-    .select('.domain')
-    .remove();
-}
-
