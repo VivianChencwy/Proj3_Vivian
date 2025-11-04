@@ -2,6 +2,7 @@
 """
 Generate global temperature heatmap for 2025 from CMIP6 data.
 This creates a PNG image that serves as the base layer for the interactive map.
+Uses Natural Earth projection to match the D3.js overlay.
 """
 
 import os
@@ -10,6 +11,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from pathlib import Path
+import cartopy.crs as ccrs
 
 def main():
     print("Loading dataset...")
@@ -20,10 +22,11 @@ def main():
     tas_2025 = ds.tas.sel(time=slice("2025-01-01", "2025-12-31")).mean(dim="time")
     tas_2025_celsius = tas_2025 - 273.15
     
-    print("Creating temperature heatmap...")
-    # Create figure with specific dimensions
+    print("Creating temperature heatmap with Natural Earth projection...")
+    # Use Natural Earth projection to match D3.js geoNaturalEarth1
+    # Figure size matches the web map dimensions (960x540)
     fig = plt.figure(figsize=(16, 9), dpi=120)
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(111, projection=ccrs.NaturalEarth())
     
     # Define temperature color scale (blue to red)
     colors = ['#2166ac', '#4393c3', '#92c5de', '#d1e5f0', '#f7f7f7', 
@@ -31,21 +34,20 @@ def main():
     n_bins = 256
     cmap = LinearSegmentedColormap.from_list('temperature', colors, N=n_bins)
     
-    # Plot the temperature data
+    # Plot the temperature data with correct projection
     im = ax.pcolormesh(
         tas_2025_celsius.lon, 
         tas_2025_celsius.lat, 
         tas_2025_celsius,
+        transform=ccrs.PlateCarree(),  # Data is in lat/lon
         cmap=cmap,
         shading='auto',
         vmin=-30,  # minimum temperature (Celsius)
         vmax=35    # maximum temperature (Celsius)
     )
     
-    # Remove axes and margins for clean image
-    ax.set_xlim(tas_2025_celsius.lon.min(), tas_2025_celsius.lon.max())
-    ax.set_ylim(tas_2025_celsius.lat.min(), tas_2025_celsius.lat.max())
-    ax.set_aspect('auto')
+    # Set global extent
+    ax.set_global()
     ax.axis('off')
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     

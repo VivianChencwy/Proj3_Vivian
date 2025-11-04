@@ -52,6 +52,7 @@ body {
   height: 100%;
   object-fit: fill;
   z-index: 0;
+  /* Equirectangular projection - perfect alignment with SVG overlay */
 }
 
 #overlay-layer {
@@ -135,22 +136,30 @@ body {
 .country {
   fill: #f5f5f5;
   fill-opacity: 1;
-  stroke: #94a3b8;
-  stroke-width: 0.5px;
+  stroke: none;
   cursor: pointer;
-  transition: fill-opacity 200ms ease, stroke 150ms ease, stroke-width 150ms ease;
+  transition: fill-opacity 200ms ease;
 }
 
 .country--hover {
   fill-opacity: 0;
-  stroke: #1f2937;
-  stroke-width: 1.5px;
 }
 
 .country--revealed {
   fill-opacity: 0;
-  stroke: #3b82f6;
-  stroke-width: 1.2px;
+}
+
+.country-border {
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 0.5px;
+  pointer-events: none;
+  transition: stroke 150ms ease, stroke-width 150ms ease;
+}
+
+.ocean-mask {
+  fill: #a8d8ea;
+  pointer-events: none;
 }
 
 .tooltip.is-visible {

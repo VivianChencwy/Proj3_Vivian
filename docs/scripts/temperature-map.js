@@ -8,8 +8,8 @@ const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries
 const HEATMAP_URL = 'data/global_temperature_2025.png';
 
 const projection = d3
-  .geoNaturalEarth1()
-  .scale(180)
+  .geoEquirectangular()
+  .scale(153)
   .translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]);
 const geoPath = d3.geoPath(projection);
 
@@ -52,10 +52,26 @@ function setupLayers() {
     .attr('id', 'overlay-layer')
     .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`)
     .attr('preserveAspectRatio', 'xMidYMid meet');
+  
+  // Add ocean mask as the first element (bottom layer)
+  overlayLayer
+    .append('path')
+    .datum({ type: 'Sphere' })
+    .attr('class', 'ocean-mask')
+    .attr('d', geoPath)
+    .style('fill', '#a8d8ea')
+    .style('pointer-events', 'none');
 }
 
 function renderCountries(countries) {
-  overlayLayer
+  // Group for country masks (middle layer)
+  const countryMasks = overlayLayer.append('g').attr('class', 'country-masks');
+  
+  // Group for country borders (top layer)
+  const countryBorders = overlayLayer.append('g').attr('class', 'country-borders');
+  
+  // Draw country masks first
+  countryMasks
     .selectAll('path.country')
     .data(countries.features)
     .join('path')
@@ -64,6 +80,18 @@ function renderCountries(countries) {
     .on('mouseenter', handleMouseEnter)
     .on('mouseleave', handleMouseLeave)
     .on('click', handleClick);
+  
+  // Draw country borders on top
+  countryBorders
+    .selectAll('path.country-border')
+    .data(countries.features)
+    .join('path')
+    .attr('class', 'country-border')
+    .attr('d', geoPath)
+    .style('fill', 'none')
+    .style('stroke', '#94a3b8')
+    .style('stroke-width', '0.5px')
+    .style('pointer-events', 'none');
 }
 
 function handleMouseEnter(event, feature) {
@@ -109,6 +137,9 @@ function handleClick(event, feature) {
     element.classed('country--revealed', true);
     addToSelectionList(countryId, countryName);
   }
+  
+  // Update corresponding border style
+  updateBorderStyle(countryId, revealedCountries.has(countryId));
 }
 
 function addToSelectionList(id, name) {
@@ -130,12 +161,23 @@ function removeFromSelectionList(id) {
   }
 }
 
+function updateBorderStyle(countryId, isRevealed) {
+  overlayLayer
+    .select('.country-borders')
+    .selectAll('path.country-border')
+    .filter(d => getCountryId(d) === countryId)
+    .style('stroke', isRevealed ? '#3b82f6' : '#94a3b8')
+    .style('stroke-width', isRevealed ? '1.2px' : '0.5px');
+}
+
 window.removeCountry = function(id) {
   revealedCountries.delete(id);
   overlayLayer
+    .select('.country-masks')
     .selectAll('path.country')
     .filter(d => getCountryId(d) === id)
     .classed('country--revealed', false);
+  updateBorderStyle(id, false);
   removeFromSelectionList(id);
 };
 
