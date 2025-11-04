@@ -55,17 +55,35 @@ function setupLayers() {
 }
 
 function renderCountries(countries) {
-  // Layer 1 (bottom): Ocean mask - covers entire map with blue
+  // Create a mask definition for ocean (inverted countries)
+  const defs = overlayLayer.append('defs');
+  const mask = defs.append('mask').attr('id', 'ocean-mask');
+  
+  // White rectangle (shows everything)
+  mask.append('rect')
+    .attr('width', MAP_WIDTH)
+    .attr('height', MAP_HEIGHT)
+    .attr('fill', 'white');
+  
+  // Black countries (hides these areas)
+  mask.selectAll('path')
+    .data(countries.features)
+    .join('path')
+    .attr('d', geoPath)
+    .attr('fill', 'black');
+  
+  // Layer 1: Ocean background (with mask applied)
   const oceanGroup = overlayLayer.append('g').attr('class', 'ocean-group');
   oceanGroup
     .append('rect')
     .attr('width', MAP_WIDTH)
     .attr('height', MAP_HEIGHT)
-    .attr('class', 'ocean-mask')
+    .attr('class', 'ocean-background')
+    .attr('mask', 'url(#ocean-mask)')
     .style('fill', '#a8d8ea')
     .style('pointer-events', 'none');
   
-  // Layer 2 (middle): Country masks - gray covering land areas
+  // Layer 2: Country masks - gray covering land areas
   const countryMasks = overlayLayer.append('g').attr('class', 'country-masks');
   countryMasks
     .selectAll('path.country')
@@ -77,7 +95,7 @@ function renderCountries(countries) {
     .on('mouseleave', handleMouseLeave)
     .on('click', handleClick);
   
-  // Layer 3 (top): Country borders - just outlines
+  // Layer 3: Country borders - just outlines
   const countryBorders = overlayLayer.append('g').attr('class', 'country-borders');
   countryBorders
     .selectAll('path.country-border')
