@@ -75,7 +75,7 @@ async function init() {
     .join('path')
     .attr('class', d => {
       const iso3 = getIso3Code(d);
-      const hasData = temperatures.has(iso3);
+      const hasData = iso3 ? temperatures.has(iso3) : false;
       return hasData ? 'country country--has-data' : 'country';
     })
     .attr('data-iso3', d => getIso3Code(d))
@@ -83,13 +83,13 @@ async function init() {
     .attr('d', geoPath)
     .attr('fill', d => {
       const iso3 = getIso3Code(d);
-      const value = temperatures.get(iso3);
+      const value = iso3 ? temperatures.get(iso3) : null;
       return value != null ? colorScale(value) : '#dbeafe';
     })
     .on('mouseover', function (event, feature) {
       const iso3 = getIso3Code(feature);
       const name = getCountryName(feature);
-      const value = temperatures.get(iso3);
+      const value = iso3 ? temperatures.get(iso3) : null;
 
       showTooltip(event, name, value);
       d3.select(this).classed('country--hover', true);
@@ -108,7 +108,7 @@ async function init() {
     .on('click', function (event, feature) {
       const iso3 = getIso3Code(feature);
       const name = getCountryName(feature);
-      const value = temperatures.get(iso3);
+      const value = iso3 ? temperatures.get(iso3) : null;
 
       if (value == null) {
         return;
@@ -127,12 +127,16 @@ async function init() {
 }
 
 function getIso3Code(feature) {
-  return (
+  const raw =
     feature.properties?.iso_a3 ||
     feature.properties?.adm0_a3 ||
-    feature.id ||
-    null
-  );
+    null;
+
+  if (!raw || raw === '-99') {
+    return null;
+  }
+
+  return String(raw).toUpperCase();
 }
 
 function getCountryName(feature) {
@@ -173,7 +177,7 @@ function addLegend(minTemp, maxTemp, colorScale) {
   const legend = svg
     .append('g')
     .attr('class', 'legend')
-    .attr('transform', `translate(${MAP_WIDTH - 260}, ${MAP_HEIGHT - 40})`);
+    .attr('transform', `translate(24, 32)`);
 
   const gradientSteps = d3.range(0, 1.01, 0.1);
 
@@ -186,20 +190,20 @@ function addLegend(minTemp, maxTemp, colorScale) {
 
   legend
     .append('rect')
-    .attr('width', 160)
-    .attr('height', 12)
-    .attr('rx', 6)
+    .attr('width', 200)
+    .attr('height', 14)
+    .attr('rx', 7)
     .attr('fill', 'url(#temperature-gradient)');
 
-  const axisScale = d3.scaleLinear().domain([minTemp, maxTemp]).range([0, 160]);
+  const axisScale = d3.scaleLinear().domain([minTemp, maxTemp]).range([0, 200]);
   const axis = d3
     .axisBottom(axisScale)
-    .ticks(5)
+    .ticks(6)
     .tickFormat(d => `${d.toFixed(1)}°C`);
 
   legend
     .append('g')
-    .attr('transform', 'translate(0, 12)')
+    .attr('transform', 'translate(0, 14)')
     .call(axis)
     .select('.domain')
     .remove();

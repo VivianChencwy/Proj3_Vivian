@@ -93,29 +93,13 @@ svg {
   transition: opacity 120ms ease;
 }
 
-.legend {
-  position: absolute;
-  bottom: 1rem;
-  left: 1rem;
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 0.4rem 0.6rem;
-  border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
-}
-
-.legend__label {
+.legend text {
   font-size: 0.75rem;
-  color: #334155;
+  fill: #1f2937;
 }
 
-.legend__gradient {
-  width: 160px;
-  height: 10px;
-  background: linear-gradient(90deg, #1f77b4 0%, #ffeda0 50%, #d73027 100%);
-  border-radius: 8px;
+.legend line {
+  stroke: rgba(15, 23, 42, 0.25);
 }
 
 .country {
