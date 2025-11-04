@@ -52,9 +52,10 @@ body {
   height: 100%;
   object-fit: fill;
   z-index: 0;
-  /* Equirectangular projection - perfect alignment with SVG overlay */
-  /* Clip to match D3 projection bounds (avoiding polar distortion) */
-  clip-path: inset(0 0 0 0);
+  /* Compress height to match D3.js Equirectangular projection actual rendering */
+  /* Image contains ±90° data, but D3 renders ~±82° effectively, so compress by ~82/90 */
+  transform: scaleY(0.89);
+  transform-origin: center center;
 }
 
 #overlay-layer {
