@@ -52,8 +52,6 @@ body {
   height: 100%;
   object-fit: fill;
   z-index: 0;
-  /* Compress height to match D3.js Equirectangular projection actual rendering */
-  /* Image contains ±90° data, but D3 renders ~±82° effectively, so compress by ~82/90 */
   transform: scaleY(0.89);
   transform-origin: center center;
 }

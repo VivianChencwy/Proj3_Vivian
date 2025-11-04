@@ -1,7 +1,3 @@
-// Interactive Climate Temperature Map with Mask Reveal
-// Bottom layer: global temperature heatmap
-// Top layer: country borders as masks that can be toggled
-
 const MAP_WIDTH = 960;
 const MAP_HEIGHT = 540;
 const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
@@ -27,7 +23,7 @@ async function init() {
     addLegend();
     setupTooltip();
 
-    console.log('✓ Map initialized');
+    console.log('Map initialized');
   } catch (err) {
     console.error('Failed to initialize map:', err);
     document.getElementById('map').innerHTML = 
@@ -38,14 +34,12 @@ async function init() {
 function setupLayers() {
   const mapContainer = document.getElementById('map');
   
-  // Bottom layer: heatmap image
   const heatmapImg = document.createElement('img');
   heatmapImg.id = 'heatmap-layer';
   heatmapImg.src = HEATMAP_URL;
   heatmapImg.alt = 'Global temperature heatmap';
   mapContainer.appendChild(heatmapImg);
 
-  // Top layer: SVG overlay with country borders
   overlayLayer = d3
     .select('#map')
     .append('svg')
@@ -55,7 +49,6 @@ function setupLayers() {
 }
 
 function renderCountries(countries) {
-  // Create a clip path for the valid projection area (sphere)
   const defs = overlayLayer.append('defs');
   const clipPath = defs.append('clipPath').attr('id', 'sphere-clip');
   clipPath
@@ -63,16 +56,13 @@ function renderCountries(countries) {
     .datum({ type: 'Sphere' })
     .attr('d', geoPath);
   
-  // Create a mask definition for ocean (inverted countries)
   const mask = defs.append('mask').attr('id', 'ocean-mask');
   
-  // White sphere (shows ocean areas)
   mask.append('path')
     .datum({ type: 'Sphere' })
     .attr('d', geoPath)
     .attr('fill', 'white');
   
-  // Black countries (hides these areas from ocean)
   mask.selectAll('path.country-mask')
     .data(countries.features)
     .join('path')
@@ -80,7 +70,6 @@ function renderCountries(countries) {
     .attr('d', geoPath)
     .attr('fill', 'black');
   
-  // Layer 1: Ocean background (only in ocean areas)
   const oceanGroup = overlayLayer.append('g').attr('class', 'ocean-group');
   oceanGroup
     .append('path')
@@ -91,7 +80,6 @@ function renderCountries(countries) {
     .style('fill', '#a8d8ea')
     .style('pointer-events', 'none');
   
-  // Layer 2: Country masks - gray covering land areas
   const countryMasks = overlayLayer.append('g').attr('class', 'country-masks');
   countryMasks
     .selectAll('path.country')
@@ -103,7 +91,6 @@ function renderCountries(countries) {
     .on('mouseleave', handleMouseLeave)
     .on('click', handleClick);
   
-  // Layer 3: Country borders - just outlines
   const countryBorders = overlayLayer.append('g').attr('class', 'country-borders');
   countryBorders
     .selectAll('path.country-border')
@@ -121,12 +108,10 @@ function handleMouseEnter(event, feature) {
   const countryId = getCountryId(feature);
   const countryName = getCountryName(feature);
 
-  // Show tooltip
   tooltip
     .style('opacity', 1)
     .html(`<strong>${countryName}</strong><br/>Click to toggle mask`);
 
-  // Add hover effect if not revealed
   if (!revealedCountries.has(countryId)) {
     d3.select(event.target).classed('country--hover', true);
   }
@@ -135,10 +120,8 @@ function handleMouseEnter(event, feature) {
 function handleMouseLeave(event, feature) {
   const countryId = getCountryId(feature);
 
-  // Hide tooltip
   tooltip.style('opacity', 0);
 
-  // Remove hover effect if not revealed
   if (!revealedCountries.has(countryId)) {
     d3.select(event.target).classed('country--hover', false);
   }
@@ -150,18 +133,15 @@ function handleClick(event, feature) {
   const element = d3.select(event.target);
 
   if (revealedCountries.has(countryId)) {
-    // Hide the heatmap (restore mask)
     revealedCountries.delete(countryId);
     element.classed('country--revealed', false);
     removeFromSelectionList(countryId);
   } else {
-    // Reveal the heatmap
     revealedCountries.add(countryId);
     element.classed('country--revealed', true);
     addToSelectionList(countryId, countryName);
   }
   
-  // Update corresponding border style
   updateBorderStyle(countryId, revealedCountries.has(countryId));
 }
 
@@ -224,13 +204,11 @@ function addLegend() {
   const legend = document.createElement('div');
   legend.className = 'legend';
   
-  // Create horizontal gradient bar
   const canvas = document.createElement('canvas');
   canvas.width = 200;
   canvas.height = 20;
   const ctx = canvas.getContext('2d');
   
-  // Temperature gradient colors (matching Python colormap)
   const gradient = ctx.createLinearGradient(0, 0, 200, 0);
   gradient.addColorStop(0, '#2166ac');
   gradient.addColorStop(0.25, '#4393c3');
@@ -241,13 +219,11 @@ function addLegend() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 200, 20);
   
-  // Add border
   ctx.strokeStyle = '#cbd5e1';
   ctx.strokeRect(0, 0, 200, 20);
   
   legend.appendChild(canvas);
   
-  // Add labels
   const labelDiv = document.createElement('div');
   labelDiv.style.display = 'flex';
   labelDiv.style.justifyContent = 'space-between';
@@ -278,7 +254,6 @@ function getCountryName(feature) {
   return feature.properties?.name || 'Unknown';
 }
 
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
