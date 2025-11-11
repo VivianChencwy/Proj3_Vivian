@@ -175,14 +175,30 @@ function updateBorderStyle(countryId, isRevealed) {
 
 window.removeCountry = function(id) {
   revealedCountries.delete(id);
+
   overlayLayer
     .select('.country-masks')
     .selectAll('path.country')
     .filter(d => getCountryId(d) === id)
-    .classed('country--revealed', false);
+    .classed('country--revealed', false)
+    .classed('country--hover', false); 
+
   updateBorderStyle(id, false);
+
   removeFromSelectionList(id);
+
+  updateMapVisuals();
 };
+
+function updateMapVisuals() {
+  overlayLayer
+    .selectAll('path.country')
+    .classed('country--revealed', d => revealedCountries.has(getCountryId(d)))
+    .classed('country--hover', false);
+}
+
+
+
 
 function setupTooltip() {
   tooltip = d3
