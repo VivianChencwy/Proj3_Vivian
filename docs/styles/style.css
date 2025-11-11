@@ -109,6 +109,7 @@ body {
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15);
   opacity: 0;
   transition: opacity 120ms ease;
+  z-index: 999;
 }
 
 .legend {
