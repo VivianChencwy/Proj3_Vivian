@@ -18,11 +18,19 @@
     </header>
 
     <main class="layout">
+      <div class="search-bar">
+      <input
+        type="text"
+        id="city-search"
+        placeholder="Search for a city..."
+        autocomplete="off"
+      />
+    </div>
       <section class="map-wrapper">
         <div id="map"></div>
       </section>
       <aside class="info-panel">
-        <h2>Selected Countries</h2>
+        <h2>Selected Countries/Regions</h2>
         <ul id="selection-list" class="selection-list"></ul>
       </aside>
     </main>
