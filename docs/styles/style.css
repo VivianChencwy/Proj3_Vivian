@@ -206,3 +206,17 @@ body {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
+
+#abstract,
+#discussion {
+  padding: 1rem 1rem;      /* 留出上下左右的空间 */
+  margin: 2rem auto;       /* 让段落与其他元素有间距并居中 */
+  max-width: 1200px;       /* 限制宽度，避免文字太长 */
+}
+
+/* 内文排版优化 */
+#abstract p,
+#discussion p {
+  line-height: 1.7;
+  text-align: justify;      /* 可选：使文字左右对齐更整齐 */
+}
