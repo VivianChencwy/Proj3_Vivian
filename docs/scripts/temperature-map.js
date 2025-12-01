@@ -1,7 +1,7 @@
 const MAP_WIDTH = 960;
 const MAP_HEIGHT = 540;
 const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
-const HEATMAP_URL = 'data/global_temperature_2025.png';
+const TEMPERATURE_DATA_URL = '../finalProject/dataset/temperature_data.zip';
 
 const projection = d3
   .geoEquirectangular()
@@ -9,19 +9,26 @@ const projection = d3
   .translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]);
 const geoPath = d3.geoPath(projection);
 
+// [From finalProject/heatmap.js] Color scale for temperature
+const colorScale = d3.scaleSequential(d3.interpolateInferno)
+  .domain([230, 310]);
+
 const revealedCountries = new Set();
-let tooltip, overlayLayer;
+let tooltip, overlayLayer, heatmapSvg;
+let allTemperatureData = null;
+let timePoints = [];
 
 async function init() {
   try {
     const worldTopo = await d3.json(WORLD_TOPOJSON_URL);
-    
     const countries = topojson.feature(worldTopo, worldTopo.objects.countries);
 
     setupLayers();
     renderCountries(countries);
     addLegend();
     setupTooltip();
+
+    await loadTemperatureData();
 
     console.log('Map initialized');
   } catch (err) {
@@ -34,11 +41,12 @@ async function init() {
 function setupLayers() {
   const mapContainer = document.getElementById('map');
   
-  const heatmapImg = document.createElement('img');
-  heatmapImg.id = 'heatmap-layer';
-  heatmapImg.src = HEATMAP_URL;
-  heatmapImg.alt = 'Global temperature heatmap';
-  mapContainer.appendChild(heatmapImg);
+  heatmapSvg = d3
+    .select('#map')
+    .append('svg')
+    .attr('id', 'heatmap-svg')
+    .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
 
   overlayLayer = d3
     .select('#map')
@@ -46,6 +54,65 @@ function setupLayers() {
     .attr('id', 'overlay-layer')
     .attr('viewBox', `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`)
     .attr('preserveAspectRatio', 'xMidYMid meet');
+}
+
+// [From finalProject/heatmap.js] Load and parse temperature data from zip
+async function loadTemperatureData() {
+  try {
+    const response = await fetch(TEMPERATURE_DATA_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const buffer = await response.arrayBuffer();
+    const zip = await JSZip.loadAsync(buffer);
+    const jsonFile = zip.file("temperature_data.json");
+    if (!jsonFile) {
+      throw new Error("temperature_data.json not found in zip file");
+    }
+    const jsonString = await jsonFile.async("string");
+    allTemperatureData = JSON.parse(jsonString);
+    
+    timePoints = Object.keys(allTemperatureData).sort();
+    
+    const slider = document.getElementById('time-slider');
+    slider.max = timePoints.length - 1;
+    slider.value = 0;
+    
+    // [From finalProject/heatmap.js] Slider input handler
+    slider.oninput = function() {
+      renderHeatmap(+this.value);
+    };
+    
+    renderHeatmap(0);
+    
+    console.log("Temperature data loaded successfully.");
+  } catch (error) {
+    console.error("Error loading temperature data:", error);
+    document.getElementById('current-time-display').textContent = 'Failed to load data';
+  }
+}
+
+// [From finalProject/heatmap.js] Render heatmap for a given time index
+function renderHeatmap(timeIndex) {
+  const currentTime = timePoints[timeIndex];
+  document.getElementById('current-time-display').textContent = currentTime;
+  
+  const currentData = allTemperatureData[currentTime];
+  
+  const circles = heatmapSvg.selectAll(".data-point")
+    .data(currentData, d => d[0] + "," + d[1]);
+  
+  circles.exit().remove();
+  
+  circles.enter()
+    .append("circle")
+    .attr("class", "data-point")
+    .attr("r", 3)
+    .merge(circles)
+    .attr("cx", d => projection([d[0], d[1]])[0])
+    .attr("cy", d => projection([d[0], d[1]])[1])
+    .attr("fill", d => colorScale(d[2]))
+    .attr("stroke", "none");
 }
 
 function renderCountries(countries) {
@@ -210,11 +277,14 @@ function addLegend() {
   const ctx = canvas.getContext('2d');
   
   const gradient = ctx.createLinearGradient(0, 0, 200, 0);
-  gradient.addColorStop(0, '#2166ac');
-  gradient.addColorStop(0.25, '#4393c3');
-  gradient.addColorStop(0.5, '#f7f7f7');
-  gradient.addColorStop(0.75, '#f4a582');
-  gradient.addColorStop(1, '#b2182b');
+  const infernoColors = [
+    { stop: 0, color: '#000004' },
+    { stop: 0.25, color: '#57106e' },
+    { stop: 0.5, color: '#bc3754' },
+    { stop: 0.75, color: '#f98e09' },
+    { stop: 1, color: '#fcffa4' }
+  ];
+  infernoColors.forEach(c => gradient.addColorStop(c.stop, c.color));
   
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 200, 20);
@@ -231,7 +301,7 @@ function addLegend() {
   labelDiv.style.fontSize = '0.75rem';
   labelDiv.style.color = '#475569';
   labelDiv.style.marginTop = '4px';
-  labelDiv.innerHTML = '<span>-30°C</span><span>35°C</span>';
+  labelDiv.innerHTML = '<span>230K (-43C)</span><span>310K (37C)</span>';
   
   const container = document.createElement('div');
   container.appendChild(canvas);
