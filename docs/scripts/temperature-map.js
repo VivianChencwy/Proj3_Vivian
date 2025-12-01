@@ -3,6 +3,8 @@ const MAP_HEIGHT = 480;
 const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const TEMPERATURE_DATA_URL = 'data/temperature_data.zip';
 
+
+
 const projection = d3
   .geoEquirectangular()
   .scale(153)
@@ -17,6 +19,16 @@ const revealedCountries = new Set();
 let tooltip, overlayLayer, heatmapSvg;
 let allTemperatureData = null;
 let timePoints = [];
+
+fetch("./data/world_countries.geojson")
+  .then(r => r.json())
+  .then(geo => {
+      L.geoJSON(geo, {
+         style: styleCountry,
+         onEachFeature: onEachFeature
+      }).addTo(map);
+  });
+
 
 async function init() {
   try {
