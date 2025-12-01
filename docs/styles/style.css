@@ -37,9 +37,12 @@ body {
 .slider-box {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-top: 0.5rem;
+  padding: 1rem clamp(1.5rem, 4vw, 3rem);
+  background: #f1f5f9;
+  margin: 0;
 }
 
 .slider-box label {
