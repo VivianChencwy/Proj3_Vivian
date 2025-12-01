@@ -24,12 +24,6 @@ body {
 }
 
 .page-header p {
-<<<<<<< HEAD
-  margin: 0 0 1rem;
-  color: #64748b;
-}
-
-=======
   margin: 0 0 0.75rem;
   color: #64748b;
 }
@@ -40,16 +34,12 @@ body {
   font-size: 0.9rem;
 }
 
->>>>>>> b54657e (temp)
 .slider-box {
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-<<<<<<< HEAD
-=======
   margin-top: 0.5rem;
->>>>>>> b54657e (temp)
 }
 
 .slider-box label {
