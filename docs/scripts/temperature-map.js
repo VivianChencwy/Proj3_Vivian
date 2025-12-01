@@ -1,4 +1,3 @@
-// Cleaned JS: City-related features removed
 const MAP_WIDTH = 960;
 const MAP_HEIGHT = 480;
 const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
@@ -11,7 +10,8 @@ const projection = d3
 const geoPath = d3.geoPath(projection);
 
 // Color scale for temperature
-const colorScale = d3.scaleSequential(d3.interpolateInferno).domain([230, 310]);
+const colorScale = d3.scaleSequential(d3.interpolateInferno)
+  .domain([230, 310]);
 
 const revealedCountries = new Set();
 let tooltip, overlayLayer, heatmapSvg;
@@ -36,31 +36,39 @@ async function init() {
     console.log('Map initialized');
   } catch (err) {
     console.error('Failed to initialize map:', err);
-    document.getElementById('map').innerHTML =
+    document.getElementById('map').innerHTML = 
       '<p style="color: red; padding: 2rem;">Failed to load map data.</p>';
   }
 }
 
+// Load and parse temperature data from zip
 async function loadTemperatureData() {
   try {
     const response = await fetch(TEMPERATURE_DATA_URL);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     const buffer = await response.arrayBuffer();
     const zip = await JSZip.loadAsync(buffer);
     const jsonFile = zip.file("temperature_data.json");
-    if (!jsonFile) throw new Error("temperature_data.json not found in zip file");
-
+    if (!jsonFile) {
+      throw new Error("temperature_data.json not found in zip file");
+    }
     const jsonString = await jsonFile.async("string");
     allTemperatureData = JSON.parse(jsonString);
+    
     timePoints = Object.keys(allTemperatureData).sort();
-
+    
     const slider = document.getElementById('time-slider');
     slider.max = timePoints.length - 1;
     slider.value = 0;
-    slider.oninput = function () { renderHeatmap(+this.value); };
 
+    slider.oninput = function() {
+      renderHeatmap(+this.value);
+    };
+    
     renderHeatmap(0);
+    
     console.log("Temperature data loaded successfully.");
   } catch (error) {
     console.error("Error loading temperature data:", error);
@@ -68,26 +76,27 @@ async function loadTemperatureData() {
   }
 }
 
+// Render heatmap for a given time index
 function renderHeatmap(timeIndex) {
   const currentTime = timePoints[timeIndex];
   document.getElementById('current-time-display').textContent = currentTime;
-
+  
   const currentData = allTemperatureData[currentTime];
-
-  const circles = heatmapSvg.selectAll('.data-point')
-    .data(currentData, d => d[0] + ',' + d[1]);
-
+  
+  const circles = heatmapSvg.selectAll(".data-point")
+    .data(currentData, d => d[0] + "," + d[1]);
+  
   circles.exit().remove();
-
+  
   circles.enter()
-    .append('circle')
-    .attr('class', 'data-point')
-    .attr('r', 3)
+    .append("circle")
+    .attr("class", "data-point")
+    .attr("r", 3)
     .merge(circles)
-    .attr('cx', d => projection([d[0], d[1]])[0])
-    .attr('cy', d => projection([d[0], d[1]])[1])
-    .attr('fill', d => colorScale(d[2]))
-    .attr('stroke', 'none');
+    .attr("cx", d => projection([d[0], d[1]])[0])
+    .attr("cy", d => projection([d[0], d[1]])[1])
+    .attr("fill", d => colorScale(d[2]))
+    .attr("stroke", "none");
 }
 
 function setupLayers() {
@@ -109,27 +118,35 @@ function setupLayers() {
 function renderCountries(countries) {
   const defs = overlayLayer.append('defs');
   const clipPath = defs.append('clipPath').attr('id', 'sphere-clip');
-  clipPath.append('path').datum({ type: 'Sphere' }).attr('d', geoPath);
-
+  clipPath
+    .append('path')
+    .datum({ type: 'Sphere' })
+    .attr('d', geoPath);
+  
   const mask = defs.append('mask').attr('id', 'ocean-mask');
-  mask.append('path').datum({ type: 'Sphere' }).attr('d', geoPath).attr('fill', 'white');
-
+  
+  mask.append('path')
+    .datum({ type: 'Sphere' })
+    .attr('d', geoPath)
+    .attr('fill', 'white');
+  
   mask.selectAll('path.country-mask')
     .data(countries.features)
     .join('path')
     .attr('class', 'country-mask')
     .attr('d', geoPath)
     .attr('fill', 'black');
-
+  
   const oceanGroup = overlayLayer.append('g').attr('class', 'ocean-group');
-  oceanGroup.append('path')
+  oceanGroup
+    .append('path')
     .datum({ type: 'Sphere' })
     .attr('class', 'ocean-background')
     .attr('d', geoPath)
     .attr('mask', 'url(#ocean-mask)')
     .style('fill', '#a8d8ea')
     .style('pointer-events', 'none');
-
+  
   const countryMasks = overlayLayer.append('g').attr('class', 'country-masks');
   countryMasks
     .selectAll('path.country')
@@ -140,7 +157,7 @@ function renderCountries(countries) {
     .on('mouseenter', handleMouseEnter)
     .on('mouseleave', handleMouseLeave)
     .on('click', handleClick);
-
+  
   const countryBorders = overlayLayer.append('g').attr('class', 'country-borders');
   countryBorders
     .selectAll('path.country-border')
@@ -158,7 +175,9 @@ function handleMouseEnter(event, feature) {
   const countryId = getCountryId(feature);
   const countryName = getCountryName(feature);
 
-  tooltip.style('opacity', 1).html(`<strong>${countryName}</strong><br/>Click to toggle mask`);
+  tooltip
+    .style('opacity', 1)
+    .html(`<strong>${countryName}</strong><br/>Click to toggle mask`);
 
   if (!revealedCountries.has(countryId)) {
     d3.select(event.target).classed('country--hover', true);
@@ -167,6 +186,7 @@ function handleMouseEnter(event, feature) {
 
 function handleMouseLeave(event, feature) {
   const countryId = getCountryId(feature);
+
   tooltip.style('opacity', 0);
 
   if (!revealedCountries.has(countryId)) {
@@ -182,12 +202,33 @@ function handleClick(event, feature) {
   if (revealedCountries.has(countryId)) {
     revealedCountries.delete(countryId);
     element.classed('country--revealed', false);
+    removeFromSelectionList(countryId);
   } else {
     revealedCountries.add(countryId);
     element.classed('country--revealed', true);
+    addToSelectionList(countryId, countryName);
   }
-
+  
   updateBorderStyle(countryId, revealedCountries.has(countryId));
+}
+
+function addToSelectionList(id, name) {
+  const list = document.getElementById('selection-list');
+  const item = document.createElement('li');
+  item.className = 'selection-list__item';
+  item.dataset.countryId = id;
+  item.innerHTML = `
+    <span>${name}</span>
+    <button onclick="removeCountry('${id}')" style="background:none;border:none;cursor:pointer;color:#ef4444;">✕</button>
+  `;
+  list.appendChild(item);
+}
+
+function removeFromSelectionList(id) {
+  const item = document.querySelector(`li[data-country-id="${id}"]`);
+  if (item) {
+    item.remove();
+  }
 }
 
 function updateBorderStyle(countryId, isRevealed) {
@@ -199,6 +240,30 @@ function updateBorderStyle(countryId, isRevealed) {
     .style('stroke-width', isRevealed ? '1.2px' : '0.5px');
 }
 
+window.removeCountry = function(id) {
+  revealedCountries.delete(id);
+
+  overlayLayer
+    .select('.country-masks')
+    .selectAll('path.country')
+    .filter(d => getCountryId(d) === id)
+    .classed('country--revealed', false)
+    .classed('country--hover', false); 
+
+  updateBorderStyle(id, false);
+
+  removeFromSelectionList(id);
+
+  updateMapVisuals();
+};
+
+function updateMapVisuals() {
+  overlayLayer
+    .selectAll('path.country')
+    .classed('country--revealed', d => revealedCountries.has(getCountryId(d)))
+    .classed('country--hover', false);
+}
+
 function setupTooltip() {
   tooltip = d3
     .select('body')
@@ -208,7 +273,9 @@ function setupTooltip() {
     .style('opacity', 0);
 
   overlayLayer.on('mousemove', event => {
-    tooltip.style('left', `${event.pageX + 12}px`).style('top', `${event.pageY - 8}px`);
+    tooltip
+      .style('left', `${event.pageX + 12}px`)
+      .style('top', `${event.pageY - 8}px`);
   });
 }
 
@@ -216,13 +283,14 @@ function addLegend() {
   const mapWrapper = document.querySelector('.map-wrapper');
   const legend = document.createElement('div');
   legend.className = 'legend';
-
+  
   const canvas = document.createElement('canvas');
   canvas.width = 200;
   canvas.height = 20;
   const ctx = canvas.getContext('2d');
-
+  
   const gradient = ctx.createLinearGradient(0, 0, 200, 0);
+
   const infernoColors = [
     { stop: 0, color: '#000004' },
     { stop: 0.25, color: '#57106e' },
@@ -231,27 +299,27 @@ function addLegend() {
     { stop: 1, color: '#fcffa4' }
   ];
   infernoColors.forEach(c => gradient.addColorStop(c.stop, c.color));
-
+  
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 200, 20);
-
+  
   ctx.strokeStyle = '#cbd5e1';
   ctx.strokeRect(0, 0, 200, 20);
-
+  
   const labelDiv = document.createElement('div');
   labelDiv.style.display = 'flex';
   labelDiv.style.justifyContent = 'space-between';
   labelDiv.style.width = '200px';
   labelDiv.style.fontSize = '0.75rem';
-  labelDiv.style.color = '#475669';
+  labelDiv.style.color = '#475569';
   labelDiv.style.marginTop = '4px';
   labelDiv.innerHTML = '<span>230K (-43C)</span><span>310K (37C)</span>';
-
+  
   const container = document.createElement('div');
   container.appendChild(canvas);
   container.appendChild(labelDiv);
   legend.appendChild(container);
-
+  
   mapWrapper.appendChild(legend);
 }
 
