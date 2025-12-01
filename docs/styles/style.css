@@ -111,7 +111,7 @@ body {
 #map {
   width: 100%;
   max-width: none; 
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 2 / 1;
   position: relative;
   overflow: hidden;
 }

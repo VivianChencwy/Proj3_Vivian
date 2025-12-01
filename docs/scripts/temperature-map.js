@@ -1,5 +1,5 @@
 const MAP_WIDTH = 960;
-const MAP_HEIGHT = 540;
+const MAP_HEIGHT = 480;
 const WORLD_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const TEMPERATURE_DATA_URL = 'data/temperature_data.zip';
 
