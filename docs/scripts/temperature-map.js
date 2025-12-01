@@ -29,11 +29,10 @@ async function init() {
 
     setupLayers();
     renderCountries(countries);
-    renderCities(cityData); 
+    renderCities(cityData);
     addLegend();
     setupTooltip();
     setupCitySearch();
-
 
     await loadTemperatureData();
 
@@ -45,17 +44,74 @@ async function init() {
   }
 }
 
+// [From finalProject/heatmap.js] Load and parse temperature data from zip
+async function loadTemperatureData() {
+  try {
+    const response = await fetch(TEMPERATURE_DATA_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const buffer = await response.arrayBuffer();
+    const zip = await JSZip.loadAsync(buffer);
+    const jsonFile = zip.file("temperature_data.json");
+    if (!jsonFile) {
+      throw new Error("temperature_data.json not found in zip file");
+    }
+    const jsonString = await jsonFile.async("string");
+    allTemperatureData = JSON.parse(jsonString);
+    
+    timePoints = Object.keys(allTemperatureData).sort();
+    
+    const slider = document.getElementById('time-slider');
+    slider.max = timePoints.length - 1;
+    slider.value = 0;
+    
+    // [From finalProject/heatmap.js] Slider input handler
+    slider.oninput = function() {
+      renderHeatmap(+this.value);
+    };
+    
+    renderHeatmap(0);
+    
+    console.log("Temperature data loaded successfully.");
+  } catch (error) {
+    console.error("Error loading temperature data:", error);
+    document.getElementById('current-time-display').textContent = 'Failed to load data';
+  }
+}
+
+// [From finalProject/heatmap.js] Render heatmap for a given time index
+function renderHeatmap(timeIndex) {
+  const currentTime = timePoints[timeIndex];
+  document.getElementById('current-time-display').textContent = currentTime;
+  
+  const currentData = allTemperatureData[currentTime];
+  
+  const circles = heatmapSvg.selectAll(".data-point")
+    .data(currentData, d => d[0] + "," + d[1]);
+  
+  circles.exit().remove();
+  
+  circles.enter()
+    .append("circle")
+    .attr("class", "data-point")
+    .attr("r", 3)
+    .merge(circles)
+    .attr("cx", d => projection([d[0], d[1]])[0])
+    .attr("cy", d => projection([d[0], d[1]])[1])
+    .attr("fill", d => colorScale(d[2]))
+    .attr("stroke", "none");
+}
+
 function setupCitySearch() {
   const searchInput = document.getElementById("city-search");
 
   searchInput.addEventListener("input", event => {
     const query = event.target.value.trim().toLowerCase();
 
-    // 选择所有城市点
     const allCities = overlayLayer.selectAll("circle.city");
 
     if (query === "") {
-      // 清空搜索时，恢复所有城市样式
       allCities
         .transition()
         .duration(200)
@@ -349,9 +405,6 @@ function updateMapVisuals() {
     .classed('country--hover', false);
 }
 
-
-
-
 function setupTooltip() {
   tooltip = d3
     .select('body')
@@ -378,6 +431,10 @@ function addLegend() {
   const ctx = canvas.getContext('2d');
   
   const gradient = ctx.createLinearGradient(0, 0, 200, 0);
+<<<<<<< HEAD
+=======
+  // [From finalProject/heatmap.js] Inferno color scale
+>>>>>>> b54657e (temp)
   const infernoColors = [
     { stop: 0, color: '#000004' },
     { stop: 0.25, color: '#57106e' },
