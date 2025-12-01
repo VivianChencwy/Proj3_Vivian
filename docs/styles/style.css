@@ -103,8 +103,8 @@ body {
 }
 
 .layout > * {
-  width: 90%;         
-  max-width: 1600px;  
+  width: 90%;
+  max-width: 1600px;
 }
 
 .map-wrapper {
@@ -113,7 +113,7 @@ body {
 
 #map {
   width: 100%;
-  max-width: none; 
+  max-width: none;
   aspect-ratio: 2 / 1;
   position: relative;
   overflow: hidden;
@@ -250,41 +250,15 @@ body {
   }
 }
 
-.search-bar {
-  width: 100%;
-  max-width: 800px;
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 1rem;
-}
-
-#city-search {
-  width: 100%;
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-#city-search:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
 #abstract,
 #discussion {
-  padding: 1rem 1rem;      /* 留出上下左右的空间 */
-  margin: 2rem auto;       /* 让段落与其他元素有间距并居中 */
-  max-width: 1200px;       /* 限制宽度，避免文字太长 */
+  padding: 1rem 1rem;
+  margin: 2rem auto;
+  max-width: 1200px;
 }
 
-/* 内文排版优化 */
 #abstract p,
 #discussion p {
   line-height: 1.7;
-  text-align: justify;      /* 可选：使文字左右对齐更整齐 */
+  text-align: justify;
 }
