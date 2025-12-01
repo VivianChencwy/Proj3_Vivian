@@ -20,13 +20,20 @@ let timePoints = [];
 
 async function init() {
   try {
-    const worldTopo = await d3.json(WORLD_TOPOJSON_URL);
+    const [worldTopo, cityData] = await Promise.all([
+      d3.json(WORLD_TOPOJSON_URL),
+      d3.json("data/city_temperatures_2025.json")
+    ]);
+
     const countries = topojson.feature(worldTopo, worldTopo.objects.countries);
 
     setupLayers();
     renderCountries(countries);
+    renderCities(cityData); 
     addLegend();
     setupTooltip();
+    setupCitySearch();
+
 
     await loadTemperatureData();
 
@@ -36,6 +43,84 @@ async function init() {
     document.getElementById('map').innerHTML = 
       '<p style="color: red; padding: 2rem;">Failed to load map data.</p>';
   }
+}
+
+function setupCitySearch() {
+  const searchInput = document.getElementById("city-search");
+
+  searchInput.addEventListener("input", event => {
+    const query = event.target.value.trim().toLowerCase();
+
+    // 选择所有城市点
+    const allCities = overlayLayer.selectAll("circle.city");
+
+    if (query === "") {
+      // 清空搜索时，恢复所有城市样式
+      allCities
+        .transition()
+        .duration(200)
+        .attr("r", 2.5)
+        .attr("fill", "#f59e0b")
+        .attr("opacity", 0.65);
+      return;
+    }
+
+    allCities.each(function (d) {
+      const element = d3.select(this);
+      const cityName = d.city.toLowerCase();
+
+      if (cityName.includes(query)) {
+        element
+          .raise()
+          .transition()
+          .duration(200)
+          .attr("r", 4.5)
+          .attr("fill", "#fb923c")
+          .attr("opacity", 1);
+      } else {
+        element
+          .transition()
+          .duration(200)
+          .attr("r", 2)
+          .attr("opacity", 0.3);
+      }
+    });
+  });
+}
+
+
+function renderCities(cityData) {
+  const cityGroup = overlayLayer.append("g").attr("class", "cities");
+
+  cityGroup
+    .selectAll("circle.city")
+    .data(cityData)
+    .join("circle")
+    .attr("class", "city")
+    .attr("cx", d => projection([d.lon, d.lat])[0])
+    .attr("cy", d => projection([d.lon, d.lat])[1])
+    .attr("r", 3)
+    .attr("fill", "#f59e0b")   
+    .attr("stroke", "#ffffff")
+    .attr("stroke-width", 0.7)
+    .attr("opacity", 0.5)
+    .on("mouseover", (event, d) => {
+      tooltip
+        .style("opacity", 1)
+        .html(`
+          <strong>${d.city}</strong><br>
+          Lat: ${d.lat.toFixed(2)}, Lon: ${d.lon.toFixed(2)}<br>
+          Height: ${d.height} m<br>
+          <hr style="margin: 4px 0; border: none; border-top: 1px solid #ccc;">
+          Q1: ${(d.Q1 - 273.15).toFixed(1)} °C<br>
+          Q2: ${(d.Q2 - 273.15).toFixed(1)} °C<br>
+          Q3: ${(d.Q3 - 273.15).toFixed(1)} °C<br>
+          Q4: ${(d.Q4 - 273.15).toFixed(1)} °C
+        `)
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 20) + "px");
+    })
+    .on("mouseout", () => tooltip.style("opacity", 0));
 }
 
 function setupLayers() {
@@ -242,14 +327,30 @@ function updateBorderStyle(countryId, isRevealed) {
 
 window.removeCountry = function(id) {
   revealedCountries.delete(id);
+
   overlayLayer
     .select('.country-masks')
     .selectAll('path.country')
     .filter(d => getCountryId(d) === id)
-    .classed('country--revealed', false);
+    .classed('country--revealed', false)
+    .classed('country--hover', false); 
+
   updateBorderStyle(id, false);
+
   removeFromSelectionList(id);
+
+  updateMapVisuals();
 };
+
+function updateMapVisuals() {
+  overlayLayer
+    .selectAll('path.country')
+    .classed('country--revealed', d => revealedCountries.has(getCountryId(d)))
+    .classed('country--hover', false);
+}
+
+
+
 
 function setupTooltip() {
   tooltip = d3

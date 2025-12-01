@@ -86,19 +86,24 @@ body {
 .layout {
   flex: 1;
   display: flex;
-  gap: 1.5rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
   padding: clamp(1.5rem, 4vw, 3rem);
-  align-items: flex-start;
+}
+
+.layout > * {
+  width: 90%;         
+  max-width: 1600px;  
 }
 
 .map-wrapper {
-  flex: 1 1 60%;
   position: relative;
 }
 
 #map {
   width: 100%;
-  max-width: 960px;
+  max-width: none; 
   aspect-ratio: 16 / 9;
   position: relative;
   overflow: hidden;
@@ -124,13 +129,11 @@ body {
 }
 
 .info-panel {
-  flex: 0 0 260px;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  padding: 1.25rem;
-  position: sticky;
-  top: clamp(1rem, 5vw, 2rem);
+  padding: 1.25rem 2rem;
+  position: static;
 }
 
 .info-panel h2 {
@@ -237,3 +240,41 @@ body {
   }
 }
 
+.search-bar {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+
+#city-search {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#city-search:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+#abstract,
+#discussion {
+  padding: 1rem 1rem;      /* 留出上下左右的空间 */
+  margin: 2rem auto;       /* 让段落与其他元素有间距并居中 */
+  max-width: 1200px;       /* 限制宽度，避免文字太长 */
+}
+
+/* 内文排版优化 */
+#abstract p,
+#discussion p {
+  line-height: 1.7;
+  text-align: justify;      /* 可选：使文字左右对齐更整齐 */
+}
